@@ -1,0 +1,4 @@
+#1 Add TypeScript  - sudo npm i -D typescript
+#2 Add The typescript compiler - npx tsc --init
+#3 Add Node typescript types - npm i --save-dev @types/node
+#2 Add TS Node to Watch changes on ts file and compile automatically - npm i -D ts-node-dev 
