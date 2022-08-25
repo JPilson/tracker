@@ -1,31 +1,62 @@
 import express from "express";
+import { Application } from "express";
+import { Request,Response } from "express";
 import { UserModel, GeoLocation } from "./models/Interfaces";
 import Utils from "./Utils/Utils";
 import FaunaDBHelper, { DB_COLLECTION, DB_INDEX } from "./Utils/FaunaDbHelper";
 
+
+interface RequestResponse<T> {
+  length: number;
+  data:Array<T>;
+  error?: boolean;
+  message?: Array<any>
+}
+
 require('dotenv').config()
-const app = require("express")();
+const app:Application = express();
 const PORT = process.env.PORT ?? 5000
 app.use(express.json());
 app.use(express.urlencoded({
     extended: true
 }))
 
+function prepareResponse<T>(request:Request,response:Response,resData:Array<T>,error:any = null ){
+  
+  const respData:RequestResponse<T> = {
+    length:resData.length,
+    data:resData,
+  }
+  if(error){
+    respData.error = true
+    respData.message = [...error]
+  }
+  
+  response.send(respData)
+  return
+}
 
-app.get("/user/get/:id", async (req: any, res: any) => {
+app.get("/user/get/:id", async (req: Request, res: Response) => {
+
   try {
+     res.header("Access-Control-Allow-Origin", "*");
+   res.header('Access-Control-Allow-Methods', 'DELETE, PUT');
+   res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     const doc = await new FaunaDBHelper().GetBy(
       DB_INDEX.USER_BY_UID,
       req.params.id
     );
-    const user: UserModel = (doc as { data: UserModel }).data;
-    res.send(user);
+    const queryResult = (doc as {data:Array<any>})['data']   ;
+    
+    prepareResponse(req,res, [queryResult])
+    return
   } catch (error: any) {
-    res.send(error);
+    prepareResponse(req,res, [],error);
+    return
   }
 });
 
-app.post("/user/profile/update",async (req:any, res:any)=>{
+app.post("/user/profile/update",async (req: Request, res: Response)=>{
     try{
      const newUserData = req.body as UserModel;
      if(!newUserData || !newUserData.uid){
@@ -40,11 +71,11 @@ app.post("/user/profile/update",async (req:any, res:any)=>{
  });
 
 
-app.post("/user/create", async (req: any, res: any) => {
+app.post("/user/create", async (req: Request, res: Response) => {
   try {
-    const newUserData = req.body as UserModel;
+    const newUserData = req.body as unknown as UserModel;
     if (!newUserData.firstName || newUserData.firstName.length < 2) {
-      res.send("First Name Required");
+      res.send()
       return;
     }
 
@@ -75,8 +106,10 @@ app.post("/user/create", async (req: any, res: any) => {
 });
 
 
-app.post("/",(req:any, res:any)=>{
-    res.send("Hi")
+app.post("/",(request: Request, response: Response)=>{
+   response
+   .type("text/plain")
+   .send("Hi")
 });
 app.get("/",(req:any, res:any)=>{
     res.send("Hi")
